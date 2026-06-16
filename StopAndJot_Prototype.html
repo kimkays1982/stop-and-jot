@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stop & Jot — Interactive Prototype</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: Georgia, 'Times New Roman', serif;
+  background: #f8f9fa;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Google Doc background ── */
+.gdoc-bg {
+  position: fixed;
+  inset: 0;
+  background: #f8f9fa;
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.gdoc-toolbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 40px;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 20px;
+  z-index: 10;
+}
+.gdoc-toolbar-logo {
+  font-family: -apple-system, sans-serif;
+  font-size: 18px;
+  color: #4285F4;
+  font-weight: 300;
+  letter-spacing: -0.5px;
+}
+.gdoc-toolbar-title {
+  font-family: -apple-system, sans-serif;
+  font-size: 14px;
+  color: #3c4043;
+}
+.gdoc-toolbar-menu {
+  font-family: -apple-system, sans-serif;
+  font-size: 12px;
+  color: #3c4043;
+  display: flex;
+  gap: 14px;
+  margin-left: 20px;
+}
+.gdoc-toolbar-menu span { cursor: pointer; }
+.gdoc-toolbar-menu span:hover { background: #f1f3f4; padding: 2px 6px; border-radius: 3px; }
+
+.gdoc-page {
+  background: #fff;
+  width: 820px;
+  min-height: calc(100vh - 48px);
+  margin-top: 40px;
+  padding: 96px 96px calc(44vh + 80px) 96px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15), 0 1px 8px rgba(0,0,0,0.08);
+  position: relative;
+}
+.gdoc-page-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 24px;
+  font-family: Arial, sans-serif;
+}
+.gdoc-p {
+  font-size: 12pt;
+  color: #000;
+  line-height: 1.9;
+  margin-bottom: 14px;
+  font-family: Arial, sans-serif;
+}
+.gdoc-p.covered {
+  color: #999;
+}
+
+/* ── Extension overlay — bottom-right landscape panel ── */
+.ext {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 52vw;
+  height: 44vh;
+  min-width: 520px;
+  min-height: 300px;
+  background: #fff;
+  border-radius: 12px 0 0 0;
+  border-top: 1px solid #dadce0;
+  border-left: 1px solid #dadce0;
+  box-shadow: -4px -4px 28px rgba(0,0,0,0.14), 0 0 0 0.5px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+}
+
+/* Resize handle visual hint */
+.ext::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 3px;
+  background: #e0e0e0;
+  border-radius: 2px;
+}
+
+/* Tab bar */
+.ext-topbar {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid #e8eaf2;
+  background: #fff;
+  min-height: 44px;
+  flex-shrink: 0;
+}
+.ext-nav {
+  display: flex; align-items: center; gap: 2px;
+  padding: 0 8px; color: #ccc; font-size: 13px; flex-shrink: 0;
+  border-right: 1px solid #f0f1f6;
+  cursor: default;
+}
+.ext-tabs { display: flex; flex: 1; padding: 0 2px; overflow: hidden; }
+.ext-tab {
+  padding: 0 9px; font-size: 11.5px; color: #888; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  display: flex; align-items: center; gap: 4px; white-space: nowrap;
+  transition: color 0.15s; flex-shrink: 0;
+}
+.ext-tab:hover { color: #444; }
+.ext-tab.active { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: 600; }
+.ext-tab svg { width: 13px; height: 13px; flex-shrink: 0; }
+.ext-icons {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 10px; color: #aaa; font-size: 12px; flex-shrink: 0;
+  border-left: 1px solid #f0f1f6;
+}
+.ext-icon-btn { cursor: pointer; padding: 2px; border-radius: 3px; transition: background 0.1s; }
+.ext-icon-btn:hover { background: #f0f1f6; color: #555; }
+
+/* Reflections bar */
+.ext-refl-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 14px; font-size: 11px; color: #666;
+  border-bottom: 1px solid #f0f1f6; background: #fafbfd;
+  cursor: pointer; flex-shrink: 0; user-select: none;
+  transition: background 0.15s;
+}
+.ext-refl-bar:hover { background: #f0f4ff; }
+.ext-refl-bar .ri { color: #1a73e8; font-size: 12px; }
+.ext-refl-count { font-weight: 600; color: #1a73e8; }
+
+/* Body */
+.ext-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.ext-body::-webkit-scrollbar { width: 4px; }
+.ext-body::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+
+/* Article content inside extension */
+.ext-article { padding: 16px 18px 24px; }
+.art-heading { font-size: 13px; font-weight: 700; color: #1a1a2e; margin-bottom: 10px; }
+.art-p {
+  font-size: 13px; color: #333; line-height: 1.7; margin-bottom: 12px;
+  transition: color 0.3s;
+}
+.art-p.locked { color: #ccc; pointer-events: none; user-select: none; }
+
+/* ── Jot Card ── */
+.jot-card {
+  background: #e8f0fe;
+  border: 1.5px solid #c5d3f5;
+  border-radius: 10px;
+  padding: 13px 14px;
+  margin: 12px 0;
+  animation: cardIn 0.25s ease-out;
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.jot-card.spanish { background: #fff8f0; border-color: #f0c895; }
+.jot-card.done { background: #edf7f0; border-color: #a8d8b4; }
+.jot-card.hidden { display: none; }
+
+.jc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+.jc-eyebrow { display: flex; align-items: center; gap: 5px; }
+.jc-icon { font-size: 10px; }
+.jc-label { font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.jot-card .jc-icon { color: #3b6fd4; }
+.jot-card .jc-label { color: #3b6fd4; }
+.jot-card.spanish .jc-icon { color: #d4780a; }
+.jot-card.spanish .jc-label { color: #d4780a; }
+.jot-card.done .jc-icon { color: #3baa6e; }
+.jot-card.done .jc-label { color: #3baa6e; }
+
+.jc-lang-toggle {
+  font-size: 10px; color: #3b6fd4; cursor: pointer;
+  display: flex; align-items: center; gap: 3px;
+  padding: 2px 6px; border-radius: 4px; transition: background 0.1s;
+}
+.jc-lang-toggle:hover { background: #d8e4fc; }
+.jot-card.spanish .jc-lang-toggle { color: #3b6fd4; }
+
+.jc-question { font-size: 13px; font-weight: 600; color: #1a1a2e; margin-bottom: 9px; line-height: 1.4; }
+
+.jc-modes { display: flex; gap: 4px; margin-bottom: 9px; }
+.jc-mode {
+  flex: 1; text-align: center; padding: 5px 3px;
+  border-radius: 5px; border: 1px solid #c5d3f5;
+  font-size: 10px; color: #666; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+  transition: all 0.15s;
+}
+.jc-mode:hover { background: #eef2fc; }
+.jc-mode.active { background: #3b6fd4; color: #fff; border-color: #3b6fd4; font-weight: 600; }
+.jot-card.spanish .jc-mode { border-color: #f0c895; }
+.jot-card.spanish .jc-mode:hover { background: #fff3e0; }
+.jot-card.spanish .jc-mode.active { background: #d4780a; border-color: #d4780a; }
+
+.jc-starters { margin-bottom: 6px; }
+.jc-starter-hint { font-size: 10px; color: #888; margin-bottom: 5px; }
+.jc-starter {
+  display: flex; align-items: center; justify-content: space-between;
+  border: 1px solid #c5d3f5; border-radius: 5px; padding: 6px 10px;
+  margin-bottom: 4px; font-size: 12px; color: #333; background: #fff;
+  cursor: pointer; transition: all 0.15s;
+}
+.jc-starter:hover { border-color: #3b6fd4; background: #f0f4ff; }
+.jc-starter.selected { background: #e8f0fe; border-color: #3b6fd4; color: #1a3a6e; font-weight: 600; }
+.jc-starter-plus { color: #3b6fd4; font-size: 14px; font-weight: 300; flex-shrink: 0; }
+.jot-card.spanish .jc-starter { border-color: #f0c895; }
+.jot-card.spanish .jc-starter:hover { background: #fff3e0; border-color: #d4780a; }
+.jot-card.spanish .jc-starter.selected { background: #fff0dc; border-color: #d4780a; color: #7a3c00; }
+.jot-card.spanish .jc-starter-plus { color: #d4780a; }
+
+.jc-textarea {
+  width: 100%; border: 1px solid #c5d3f5; border-radius: 6px;
+  padding: 8px 10px; font-size: 12px; color: #333; background: #fff;
+  resize: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.55; margin-top: 2px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  min-height: 56px;
+}
+.jc-textarea:focus { outline: none; border-color: #3b6fd4; box-shadow: 0 0 0 2px rgba(59,111,212,0.12); }
+.jot-card.spanish .jc-textarea { border-color: #f0c895; }
+.jot-card.spanish .jc-textarea:focus { border-color: #d4780a; box-shadow: 0 0 0 2px rgba(212,120,10,0.12); }
+
+.jc-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.jc-char-count { font-size: 10px; color: #bbb; }
+.jc-actions { display: flex; gap: 6px; align-items: center; }
+.jc-skip {
+  font-size: 10px; color: #666; padding: 4px 10px;
+  border: 1px solid #d0d4e4; border-radius: 4px; cursor: pointer;
+  background: #fff; transition: background 0.1s;
+}
+.jc-skip:hover { background: #f4f5f8; }
+.jc-submit {
+  font-size: 10px; color: #fff; background: #3b6fd4;
+  padding: 4px 14px; border-radius: 4px; font-weight: 600;
+  cursor: pointer; border: none; transition: background 0.15s;
+}
+.jc-submit:hover { background: #2d5ab8; }
+.jc-submit:disabled { background: #c5d3f5; cursor: not-allowed; }
+.jot-card.spanish .jc-submit { background: #d4780a; }
+.jot-card.spanish .jc-submit:hover { background: #b56208; }
+
+/* Feedback state (replaces input area) */
+.jc-feedback { animation: cardIn 0.2s ease-out; }
+.jc-fb-text { font-size: 12px; color: #2a5c38; line-height: 1.6; margin-bottom: 8px; }
+.jc-fb-text.spanish { color: #5c3a00; }
+.jc-fb-footer { display: flex; align-items: center; justify-content: space-between; }
+.jc-fb-saved { font-size: 10px; color: #3baa6e; display: flex; align-items: center; gap: 3px; }
+.jc-fb-continue {
+  font-size: 10px; color: #3b6fd4; cursor: pointer;
+  padding: 3px 8px; border-radius: 4px; transition: background 0.1s;
+}
+.jc-fb-continue:hover { background: #e8f0fe; }
+
+/* Reflection trail */
+.refl-panel { padding: 0 14px 20px; }
+.refl-panel-header {
+  font-size: 12px; font-weight: 700; color: #333;
+  padding: 10px 0 8px;
+  border-bottom: 1px solid #e8eaf2;
+  margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.refl-entry {
+  border: 1px solid #e8eaf2; border-radius: 8px; padding: 10px 12px;
+  margin-bottom: 8px; background: #fff;
+}
+.refl-tags { display: flex; gap: 4px; margin-bottom: 5px; }
+.refl-tag {
+  font-size: 9px; padding: 2px 7px; border-radius: 10px; font-weight: 600;
+}
+.refl-tag.lang { background: #e8f0fe; color: #3b6fd4; }
+.refl-tag.mode-sf { background: #e8f5ec; color: #3baa6e; }
+.refl-tag.mode-v { background: #e8f0fe; color: #3b6fd4; }
+.refl-tag.mode-t { background: #f3e8fd; color: #7b3fb8; }
+.refl-q { font-size: 10px; color: #999; margin-bottom: 3px; font-style: italic; }
+.refl-a { font-size: 11.5px; color: #333; line-height: 1.55; }
+.refl-actions { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.refl-copy {
+  display: flex; align-items: center; gap: 6px;
+  border: 1px solid #c5d3f5; border-radius: 6px; padding: 7px 12px;
+  font-size: 11px; color: #3b6fd4; cursor: pointer; background: #fff;
+  width: fit-content; transition: background 0.15s;
+}
+.refl-copy:hover { background: #f0f4ff; }
+.refl-notice {
+  display: flex; align-items: center; gap: 5px;
+  background: #fff8ec; border: 1px solid #f0d8a0;
+  border-radius: 5px; padding: 6px 10px;
+  font-size: 10px; color: #7a5a00;
+}
+.ext-panel-notice {
+  font-size: 10px; color: #bbb; font-style: italic;
+  padding: 8px 18px 10px; border-top: 1px solid #f0f1f6;
+  flex-shrink: 0;
+}
+
+/* Proto hint bar — sits above the panel in the visible doc area */
+.proto-hint {
+  position: fixed;
+  bottom: calc(44vh + 10px);
+  left: 20px;
+  background: rgba(30,30,30,0.78);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-family: -apple-system, sans-serif;
+  font-size: 11px;
+  pointer-events: none;
+  z-index: 200;
+  backdrop-filter: blur(4px);
+}
+.proto-hint span { opacity: 0.7; }
+
+/* Progress indicator — top of page */
+.proto-progress {
+  position: fixed;
+  top: 40px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #e8eaf2;
+  z-index: 50;
+}
+.proto-progress-bar {
+  height: 100%;
+  background: #1a73e8;
+  transition: width 0.4s ease;
+}
+
+</style>
+</head>
+<body>
+
+<!-- ── Google Docs background ── -->
+<div class="gdoc-bg">
+  <div class="gdoc-toolbar">
+    <div class="gdoc-toolbar-logo">📄</div>
+    <div class="gdoc-toolbar-title">Tornado — Reading Assignment</div>
+    <div class="gdoc-toolbar-menu">
+      <span>File</span><span>Edit</span><span>View</span><span>Insert</span><span>Format</span><span>Tools</span>
+    </div>
+  </div>
+  <div class="gdoc-page">
+    <div class="gdoc-page-title">"Tornado"</div>
+    <div class="gdoc-p">A tornado is a type of violent windstorm in which a rapidly rotating column of air extends from the base of a thunderstorm to the ground. Like a hurricane, a tornado is a type of cyclone. A cyclone is a low-pressure area with winds spiraling around the center. A low-pressure area is a region in which warm, light air is rising into the atmosphere.</div>
+    <div class="gdoc-p covered">Tornadoes can be various sizes, shapes, and colors. They can occur in most parts of the world, except in the polar regions. Most tornadoes, however, occur in the United States, where they are sometimes called twisters. Most tornadoes in the United States occur between March and June. But they can happen at any time of year.</div>
+    <div class="gdoc-p covered">Tornadoes typically develop within a large low-pressure system. The winds circling around this "low" bring warm, moist air northward from the Gulf of Mexico. They also bring cool, dry air from the west. The warm air flows in from the south. The cold, dry air flows in from the west. This creates the conditions for a large storm system from the south and west.</div>
+    <div class="gdoc-p covered">As these streams of air converge, conditions are just right for powerful thunderstorms that can develop. Under certain conditions, smaller rotations, called vortices, develop inside the larger circulation.</div>
+    <div class="gdoc-p covered">These types of conditions often occur in an area that runs northeastward across the Great Plains of the United States are Kansas, Missouri, Nebraska, and Iowa.</div>
+    <div class="gdoc-p covered">Most tornadoes begin high up in a large thundercloud. At times, the rotating air begins to descend from the base of the thundercloud. As it descends down from the thundercloud, it forms a funnel that reaches the ground. The only clue that a tornado is approaching from a distance is a dark, funnel-shaped cloud.</div>
+  </div>
+</div>
+
+<!-- ── Progress bar ── -->
+<div class="proto-progress">
+  <div class="proto-progress-bar" id="progressBar" style="width:0%"></div>
+</div>
+
+<!-- ── Medley Chrome Extension Overlay ── -->
+<div class="ext" id="ext">
+
+  <!-- Tab bar -->
+  <div class="ext-topbar">
+    <div class="ext-nav">↖ ↘</div>
+    <div class="ext-tabs">
+      <div class="ext-tab" onclick="switchTab('amp')">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="1.5" fill="currentColor"/><path d="M5.70 9.93 A3 3 0 1 1 10.30 9.93" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/><path d="M3.79 11.54 A5.5 5.5 0 1 1 12.21 11.54" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg>
+        Amplifier
+      </div>
+      <div class="ext-tab active" id="tab-sj" onclick="switchTab('sj')">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M10.5 2.5 L13.5 5.5 L5.5 13.5 L2 14 L2.5 10.5 Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/><line x1="8.5" y1="4.5" x2="11.5" y2="7.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2.5 10.5 L5.5 13.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+        Stop &amp; Jot
+      </div>
+      <div class="ext-tab" onclick="switchTab('sh')">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="3.5" cy="11.5" r="1.8" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="3.5" cy="5.5" r="1.8" stroke="currentColor" stroke-width="1.3" fill="none"/><line x1="5.1" y1="10.6" x2="14" y2="3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="5.1" y1="6.4" x2="14" y2="13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="8.2" cy="8" r="0.8" fill="currentColor"/></svg>
+        Shorten
+      </div>
+      <div class="ext-tab" onclick="switchTab('tr')">
+        <svg viewBox="0 0 16 16" fill="none"><text x="1" y="10" font-size="7" font-weight="700" fill="currentColor" font-family="sans-serif">文</text><text x="8" y="14" font-size="6" font-weight="600" fill="currentColor" font-family="sans-serif">A</text><path d="M9 7 L13 13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Translate
+      </div>
+    </div>
+    <div class="ext-icons">
+      <span class="ext-icon-btn" title="Listen">🎧</span>
+      <span class="ext-icon-btn" title="Copy">☐</span>
+      <span class="ext-icon-btn" title="Text size">Tₜ</span>
+      <span class="ext-icon-btn" title="Close">✕</span>
+    </div>
+  </div>
+
+  <!-- Reflections bar -->
+  <div class="ext-refl-bar" id="reflBar" onclick="scrollToRefl()">
+    <span class="ri">📋</span>
+    Reading reflections
+    <span class="ext-refl-count" id="reflCount">(0 of 2)</span>
+    <span style="margin-left:auto;color:#ccc">›</span>
+  </div>
+
+  <!-- Stop & Jot body -->
+  <div class="ext-body" id="sjBody">
+    <div class="ext-article" id="sjArticle">
+
+      <!-- Article heading -->
+      <div class="art-heading">"Tornado"</div>
+
+      <!-- Paragraph 1 (always visible) -->
+      <div class="art-p" id="p1">A tornado is a type of violent windstorm in which a rapidly rotating column of air extends from the base of a thunderstorm to the ground. Like a hurricane, a tornado is a type of cyclone. A cyclone is a low-pressure area with winds spiraling around the center. A low-pressure area is a region in which warm, light air is rising into the atmosphere.</div>
+
+      <!-- ── JOT CARD 1 ── -->
+      <div class="jot-card" id="jot1">
+        <div class="jc-header">
+          <div class="jc-eyebrow"><span class="jc-icon">✦</span><span class="jc-label">Pause to Think</span></div>
+          <div class="jc-lang-toggle" id="lang1Toggle" onclick="toggleLang(1)">ᴬₐ En español</div>
+        </div>
+        <div class="jc-question" id="jot1Q">What is a tornado? Use your own words.</div>
+
+        <div class="jc-modes" id="jot1Modes">
+          <div class="jc-mode" onclick="setMode(1,'type')">✏ Type</div>
+          <div class="jc-mode" onclick="setMode(1,'voice')">🎤 Voice</div>
+          <div class="jc-mode active" onclick="setMode(1,'starter')">⬛ Sentence starter</div>
+        </div>
+
+        <div id="jot1Starters">
+          <div class="jc-starter-hint" id="jot1StarterHint">Tap a starter or type your own response:</div>
+          <div class="jc-starter" id="jot1S1" onclick="selectStarter(1, this, 'A tornado is')">A tornado is ___. <span class="jc-starter-plus">+</span></div>
+          <div class="jc-starter" id="jot1S2" onclick="selectStarter(1, this, 'A tornado is a kind of')">A tornado is a kind of ___. <span class="jc-starter-plus">+</span></div>
+        </div>
+
+        <textarea class="jc-textarea" id="jot1Input" rows="3" placeholder="Type your response here..." oninput="onInput(1)"></textarea>
+
+        <div class="jc-footer">
+          <div class="jc-char-count" id="jot1Count"></div>
+          <div class="jc-actions">
+            <div class="jc-skip" onclick="skipJot(1)">Skip</div>
+            <button class="jc-submit" id="jot1Submit" onclick="submitJot(1)" disabled>Submit →</button>
+          </div>
+        </div>
+      </div>
+      <!-- end jot 1 -->
+
+      <!-- Paragraph 2 -->
+      <div class="art-p" id="p2">Tornadoes can be various sizes, shapes, and colors. They can occur in most parts of the world, except in the polar regions. Most tornadoes occur in the United States, where they are sometimes called twisters.</div>
+
+      <!-- Paragraph 3 -->
+      <div class="art-p" id="p3">Tornadoes typically develop within a large low-pressure system. The winds circling around this "low" bring warm, moist air northward from the Gulf of Mexico and cool, dry air from the west. As these streams of air converge, conditions are just right for powerful thunderstorms.</div>
+
+      <!-- ── JOT CARD 2 ── -->
+      <div class="jot-card" id="jot2">
+        <div class="jc-header">
+          <div class="jc-eyebrow"><span class="jc-icon">✦</span><span class="jc-label">Pause to Think</span></div>
+          <div class="jc-lang-toggle" id="lang2Toggle" onclick="toggleLang(2)">ᴬₐ En español</div>
+        </div>
+        <div class="jc-question" id="jot2Q">Why do most tornadoes happen in "tornado alley"?</div>
+
+        <div class="jc-modes" id="jot2Modes">
+          <div class="jc-mode" onclick="setMode(2,'type')">✏ Type</div>
+          <div class="jc-mode" onclick="setMode(2,'voice')">🎤 Voice</div>
+          <div class="jc-mode active" onclick="setMode(2,'starter')">⬛ Sentence starter</div>
+        </div>
+
+        <div id="jot2Starters">
+          <div class="jc-starter-hint" id="jot2StarterHint">Tap a starter or type your own response:</div>
+          <div class="jc-starter" id="jot2S1" onclick="selectStarter(2, this, 'Most tornadoes happen there because')">Most tornadoes happen there because ___. <span class="jc-starter-plus">+</span></div>
+          <div class="jc-starter" id="jot2S2" onclick="selectStarter(2, this, 'The warm and cold air in tornado alley')">The warm and cold air in tornado alley ___. <span class="jc-starter-plus">+</span></div>
+        </div>
+
+        <textarea class="jc-textarea" id="jot2Input" rows="3" placeholder="Type your response here..." oninput="onInput(2)"></textarea>
+
+        <div class="jc-footer">
+          <div class="jc-char-count" id="jot2Count"></div>
+          <div class="jc-actions">
+            <div class="jc-skip" onclick="skipJot(2)">Skip</div>
+            <button class="jc-submit" id="jot2Submit" onclick="submitJot(2)" disabled>Submit →</button>
+          </div>
+        </div>
+      </div>
+      <!-- end jot 2 -->
+
+      <!-- Paragraph 4 -->
+      <div class="art-p" id="p4">Most tornadoes begin high up in a large thundercloud. At times, the rotating air begins to descend from the base of the thundercloud. As it descends, it forms a funnel that reaches the ground. The only clue that a tornado is approaching is a dark, funnel-shaped cloud.</div>
+
+      <!-- Reflection trail (hidden until both jots done) -->
+      <div id="reflTrail" style="display:none">
+        <div style="height:1px;background:#e8eaf2;margin:4px 0 0"></div>
+      </div>
+
+    </div><!-- end ext-article -->
+
+    <!-- Reflection panel (populated dynamically) -->
+    <div class="refl-panel" id="reflPanel" style="display:none">
+      <div class="refl-panel-header">
+        Your reading reflections
+        <span id="reflPanelCount" style="font-size:11px;color:#1a73e8;font-weight:400"></span>
+      </div>
+      <div id="reflEntries"></div>
+      <div class="refl-actions">
+        <div class="refl-copy" onclick="copyReflections()">📋 Copy reflections</div>
+        <div class="refl-notice">⊙ Saved for this reading. Copy to keep them.</div>
+      </div>
+    </div>
+
+  </div><!-- end ext-body -->
+
+  <div class="ext-panel-notice" id="panelNotice" style="display:none">Responses saved for this reading session only.</div>
+</div>
+
+<!-- ── Hint bar ── -->
+<div class="proto-hint">
+  <span>Prototype · </span>Read the article, respond to each Stop &amp; Jot card when it appears
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const state = {
+  jot1: { done: false, skipped: false, lang: 'en', mode: 'starter', response: '', selectedStarter: null },
+  jot2: { done: false, skipped: false, lang: 'en', mode: 'starter', response: '', selectedStarter: null }
+};
+
+const FEEDBACK = {
+  jot1: {
+    en: "You focused on what a tornado is and how it moves. That's a strong literal recall. As you keep reading, notice how the article explains <em>why</em> tornadoes move that way.",
+    es: "Te enfocaste en qué es un tornado y cómo se mueve. Eso es una remembranza literal sólida. Al continuar leyendo, observa cómo el artículo explica <em>por qué</em> los tornados se mueven así."
+  },
+  jot2: {
+    en: "You connected the geography to the weather patterns. That's synthesis — you pulled together two separate ideas from the text. Nice thinking.",
+    es: "Conectaste la geografía con los patrones del tiempo. Eso es síntesis — uniste dos ideas separadas del texto. Buen pensamiento."
+  }
+};
+
+const QUESTIONS = {
+  jot1: {
+    en: "What is a tornado? Use your own words.",
+    es: "¿Qué es un tornado? Usa tus propias palabras."
+  },
+  jot2: {
+    en: 'Why do most tornadoes happen in "tornado alley"?',
+    es: '¿Por qué ocurren la mayoría de los tornados en el "tornado alley"?'
+  }
+};
+
+const STARTERS = {
+  jot1: {
+    en: ['A tornado is', 'A tornado is a kind of'],
+    es: ['Un tornado es', 'Un tornado es un tipo de']
+  },
+  jot2: {
+    en: ['Most tornadoes happen there because', 'The warm and cold air in tornado alley'],
+    es: ['La mayoría de los tornados ocurren allí porque', 'El aire cálido y frío en el "tornado alley"']
+  }
+};
+
+const STARTER_DISPLAY = {
+  jot1: {
+    en: ['A tornado is ___.', 'A tornado is a kind of ___.'],
+    es: ['Un tornado es ___.', 'Un tornado es un tipo de ___.']
+  },
+  jot2: {
+    en: ['Most tornadoes happen there because ___.', 'The warm and cold air in tornado alley ___.'],
+    es: ['La mayoría de los tornados ocurren allí porque ___.', 'El aire cálido y frío en el "tornado alley" ___.']
+  }
+};
+
+const MODES = {
+  en: ['✏ Type', '🎤 Voice', '⬛ Sentence starter'],
+  es: ['✏ Escribir', '🎤 Voz', '⬛ Inicio de oración']
+};
+
+const HINTS = {
+  en: 'Tap a starter or type your own response:',
+  es: 'Toca un inicio o escribe tu propia respuesta:'
+};
+
+const TOGGLE = {
+  en: 'ᴬₐ En español',
+  es: '🌐 In English'
+};
+
+const SKIP_LABEL = { en: 'Skip', es: 'Saltar' };
+const SUBMIT_LABEL = { en: 'Submit →', es: 'Enviar →' };
+
+let jotResponses = [];
+let reflCount = 0;
+
+// ── Tab switching (other tabs just show placeholder) ─────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.ext-tab').forEach(t => t.classList.remove('active'));
+  if (tab === 'sj') {
+    document.getElementById('tab-sj').classList.add('active');
+    document.getElementById('sjBody').style.display = '';
+  } else {
+    document.querySelectorAll('.ext-tab')[['amp','sj','sh','tr'].indexOf(tab)].classList.add('active');
+    document.getElementById('sjBody').style.display = '';
+    // Other tabs could show placeholder — keep as-is for prototype
+  }
+}
+
+// ── Language toggle ────────────────────────────────────────────────────────
+function toggleLang(n) {
+  const s = state['jot' + n];
+  if (s.done) return;
+  s.lang = s.lang === 'en' ? 'es' : 'en';
+  rerenderJot(n);
+}
+
+function rerenderJot(n) {
+  const s = state['jot' + n];
+  const lang = s.lang;
+  const key = 'jot' + n;
+  const card = document.getElementById(key);
+
+  // Card color
+  card.className = 'jot-card' + (lang === 'es' ? ' spanish' : '');
+
+  // Toggle button
+  document.getElementById('lang' + n + 'Toggle').textContent = TOGGLE[lang];
+
+  // Question
+  document.getElementById(key + 'Q').textContent = QUESTIONS[key][lang];
+
+  // Mode buttons
+  const modeEls = document.getElementById(key + 'Modes').querySelectorAll('.jc-mode');
+  const modeIndex = ['type','voice','starter'].indexOf(s.mode);
+  modeEls.forEach((el, i) => {
+    el.textContent = MODES[lang][i];
+    el.className = 'jc-mode' + (i === modeIndex ? ' active' : '');
+    el.onclick = () => setMode(n, ['type','voice','starter'][i]);
+  });
+
+  // Starters
+  const starterHint = document.getElementById(key + 'StarterHint');
+  if (starterHint) starterHint.textContent = HINTS[lang];
+  const s1 = document.getElementById(key + 'S1');
+  const s2 = document.getElementById(key + 'S2');
+  if (s1) {
+    s1.innerHTML = STARTER_DISPLAY[key][lang][0] + ' <span class="jc-starter-plus">+</span>';
+    s1.onclick = () => selectStarter(n, s1, STARTERS[key][lang][0]);
+    s1.className = 'jc-starter' + (s.selectedStarter === 0 ? ' selected' : '');
+  }
+  if (s2) {
+    s2.innerHTML = STARTER_DISPLAY[key][lang][1] + ' <span class="jc-starter-plus">+</span>';
+    s2.onclick = () => selectStarter(n, s2, STARTERS[key][lang][1]);
+    s2.className = 'jc-starter' + (s.selectedStarter === 1 ? ' selected' : '');
+  }
+
+  // Starters visibility
+  const startersEl = document.getElementById(key + 'Starters');
+  if (startersEl) startersEl.style.display = s.mode === 'starter' ? '' : 'none';
+
+  // Submit/skip
+  const skipEl = card.querySelector('.jc-skip');
+  const submitEl = document.getElementById(key + 'Submit');
+  if (skipEl) skipEl.textContent = SKIP_LABEL[lang];
+  if (submitEl) submitEl.textContent = SUBMIT_LABEL[lang];
+}
+
+// ── Mode switch ────────────────────────────────────────────────────────────
+function setMode(n, mode) {
+  const s = state['jot' + n];
+  s.mode = mode;
+  const key = 'jot' + n;
+  const modeEls = document.getElementById(key + 'Modes').querySelectorAll('.jc-mode');
+  const modeIndex = ['type','voice','starter'].indexOf(mode);
+  modeEls.forEach((el, i) => el.className = 'jc-mode' + (i === modeIndex ? ' active' : ''));
+
+  const startersEl = document.getElementById(key + 'Starters');
+  if (startersEl) startersEl.style.display = mode === 'starter' ? '' : 'none';
+
+  if (mode === 'voice') {
+    // Simulate voice — prefill with a mocked response after 1.5s
+    const input = document.getElementById(key + 'Input');
+    input.placeholder = '🎤 Recording...';
+    input.disabled = true;
+    setTimeout(() => {
+      const voiceResponses = {
+        jot1: { en: 'A tornado is a spinning storm that comes down from clouds and causes a lot of damage.', es: 'Un tornado es una tormenta giratoria que baja de las nubes y causa mucho daño.' },
+        jot2: { en: 'Because warm and cold air meet there and create perfect conditions for tornadoes.', es: 'Porque el aire cálido y frío se encuentran allí y crean las condiciones perfectas para los tornados.' }
+      };
+      input.value = voiceResponses[key][s.lang];
+      input.disabled = false;
+      input.placeholder = 'Type your response here...';
+      s.response = input.value;
+      onInput(n);
+    }, 1500);
+  }
+}
+
+// ── Starter select ─────────────────────────────────────────────────────────
+function selectStarter(n, el, starterText) {
+  const s = state['jot' + n];
+  const key = 'jot' + n;
+
+  // Deselect all starters
+  const allStarters = el.closest('.jot-card').querySelectorAll('.jc-starter');
+  allStarters.forEach((st, i) => {
+    st.classList.remove('selected');
+    st.querySelector('.jc-starter-plus').textContent = '+';
+    if (st === el) {
+      st.classList.add('selected');
+      st.querySelector('.jc-starter-plus').textContent = '✓';
+      s.selectedStarter = i;
+    }
+  });
+
+  // Fill textarea
+  const input = document.getElementById(key + 'Input');
+  input.value = starterText + ' ';
+  input.focus();
+  input.setSelectionRange(input.value.length, input.value.length);
+  s.response = input.value;
+  onInput(n);
+}
+
+// ── Input handler ──────────────────────────────────────────────────────────
+function onInput(n) {
+  const key = 'jot' + n;
+  const input = document.getElementById(key + 'Input');
+  const submit = document.getElementById(key + 'Submit');
+  const count = document.getElementById(key + 'Count');
+  const text = input.value.trim();
+  state['jot' + n].response = input.value;
+
+  const hasContent = text.length > 3;
+  submit.disabled = !hasContent;
+
+  if (text.length > 0) {
+    count.textContent = text.length + ' chars';
+  } else {
+    count.textContent = '';
+  }
+}
+
+// ── Submit ─────────────────────────────────────────────────────────────────
+function submitJot(n) {
+  const s = state['jot' + n];
+  const key = 'jot' + n;
+  const card = document.getElementById(key);
+  const lang = s.lang;
+
+  s.done = true;
+  s.response = document.getElementById(key + 'Input').value;
+
+  // Store for reflection trail
+  const modeLabel = { type: lang === 'en' ? 'Type' : 'Escribir', voice: lang === 'en' ? 'Voice' : 'Voz', starter: 'Sentence frame' };
+  jotResponses.push({
+    lang: lang === 'es' ? 'Español' : 'English',
+    mode: modeLabel[s.mode] || 'Type',
+    question: QUESTIONS[key][lang],
+    answer: s.response.trim()
+  });
+
+  // Turn card green (feedback)
+  card.className = 'jot-card done';
+  card.querySelector('.jc-label').textContent = lang === 'en' ? 'Reflection' : 'Reflexión';
+
+  // Replace input area with feedback
+  const modesEl = document.getElementById(key + 'Modes');
+  const startersEl = document.getElementById(key + 'Starters');
+  const inputEl = document.getElementById(key + 'Input');
+  const footerEl = card.querySelector('.jc-footer');
+
+  modesEl.style.display = 'none';
+  if (startersEl) startersEl.style.display = 'none';
+  inputEl.style.display = 'none';
+  footerEl.style.display = 'none';
+
+  // Hide lang toggle (already responded)
+  document.getElementById('lang' + n + 'Toggle').style.display = 'none';
+
+  // Insert feedback
+  const feedback = document.createElement('div');
+  feedback.className = 'jc-feedback';
+  feedback.innerHTML = `
+    <div class="jc-fb-text ${lang === 'es' ? 'spanish' : ''}">${FEEDBACK[key][lang]}</div>
+    <div class="jc-fb-footer">
+      <div class="jc-fb-saved">✓ ${lang === 'en' ? 'Added to your journal' : 'Añadido a tu diario'}</div>
+    </div>
+  `;
+  inputEl.after(feedback);
+
+  // Update refl count
+  reflCount++;
+  updateReflCount();
+  updateProgress(n);
+
+  // For jot 2, show reflection trail automatically after a beat
+  if (n === 2) {
+    setTimeout(() => showReflectionTrail(), 600);
+  }
+}
+
+function skipJot(n) {
+  const s = state['jot' + n];
+  const key = 'jot' + n;
+  const card = document.getElementById(key);
+  const lang = s.lang;
+
+  s.skipped = true;
+  s.done = true;
+
+  // Collapse input area (same pattern as submit)
+  const modesEl = document.getElementById(key + 'Modes');
+  const startersEl = document.getElementById(key + 'Starters');
+  const inputEl = document.getElementById(key + 'Input');
+  const footerEl = card.querySelector('.jc-footer');
+
+  modesEl.style.display = 'none';
+  if (startersEl) startersEl.style.display = 'none';
+  inputEl.style.display = 'none';
+  footerEl.style.display = 'none';
+  document.getElementById('lang' + n + 'Toggle').style.display = 'none';
+
+  // Skip messages
+  const skipMsg = {
+    jot1: {
+      en: "No worries — keep reading. You can always jot a thought on the next one.",
+      es: "No pasa nada — sigue leyendo. Puedes escribir un pensamiento en la siguiente."
+    },
+    jot2: {
+      en: "That's okay. Your reflection trail is ready whenever you want to look back.",
+      es: "Está bien. Tu rastro de reflexión está listo cuando quieras revisarlo."
+    }
+  };
+
+  const skip = document.createElement('div');
+  skip.className = 'jc-feedback';
+  skip.innerHTML = `
+    <div style="font-size:12px; color:#6b7280; line-height:1.6; font-style:italic;">
+      ${skipMsg[key][lang]}
+    </div>
+  `;
+  inputEl.after(skip);
+
+  updateProgress(n);
+  if (n === 2) setTimeout(() => showReflectionTrail(), 600);
+}
+
+// ── Reflection trail ───────────────────────────────────────────────────────
+function showReflectionTrail() {
+  const reflTrail = document.getElementById('reflTrail');
+  reflTrail.style.display = '';
+
+  const reflPanel = document.getElementById('reflPanel');
+  reflPanel.style.display = '';
+  document.getElementById('panelNotice').style.display = '';
+
+  const countEl = document.getElementById('reflPanelCount');
+  countEl.textContent = jotResponses.length > 0 ? jotResponses.length + ' of 2 jots' : '';
+
+  const entriesEl = document.getElementById('reflEntries');
+  entriesEl.innerHTML = '';
+
+  if (jotResponses.length === 0) {
+    entriesEl.innerHTML = `
+      <div style="padding:12px 4px; font-size:12px; color:#9ca3af; line-height:1.6; font-style:italic;">
+        You skipped both jots this time — that's okay. Your reflections will show up here next time you respond.
+      </div>
+    `;
+    document.querySelector('.refl-copy').style.display = 'none';
+  } else {
+    jotResponses.forEach(r => {
+      const modeClass = r.mode === 'Voice' ? 'voice' : r.mode === 'Type' ? 'mode-t' : 'mode-sf';
+      entriesEl.innerHTML += `
+        <div class="refl-entry">
+          <div class="refl-tags">
+            <span class="refl-tag lang">${r.lang}</span>
+            <span class="refl-tag ${modeClass}">${r.mode}</span>
+          </div>
+          <div class="refl-q">${r.question}</div>
+          <div class="refl-a">${r.answer}</div>
+        </div>
+      `;
+    });
+  }
+
+  reflPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  updateProgress(3);
+}
+
+function copyReflections() {
+  const text = jotResponses.map(r => `Q: ${r.question}\nA: ${r.answer}`).join('\n\n');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.refl-copy');
+    btn.innerHTML = '✓ Copied!';
+    btn.style.color = '#3baa6e';
+    btn.style.borderColor = '#3baa6e';
+    setTimeout(() => {
+      btn.innerHTML = '📋 Copy reflections';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }, 2000);
+  });
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function updateReflCount() {
+  document.getElementById('reflCount').textContent = `(${reflCount} of 2)`;
+}
+
+function updateProgress(step) {
+  const pct = { 1: 25, 2: 60, 3: 100 }[step] || 0;
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+
+function scrollToRefl() {
+  const reflPanel = document.getElementById('reflPanel');
+  if (reflPanel.style.display !== 'none') {
+    reflPanel.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+// Initial render
+rerenderJot(1);
+rerenderJot(2);
+</script>
+</body>
+</html>
